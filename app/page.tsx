@@ -17,6 +17,7 @@ function daysInMonth(year: number, month: number) {
 
 export default function HomePage() {
   const router = useRouter();
+  const [name, setName] = useState("");
   const [year, setYear] = useState("");
   const [month, setMonth] = useState("");
   const [day, setDay] = useState("");
@@ -53,6 +54,7 @@ export default function HomePage() {
       gender,
     });
     if (birthTime) params.set("birthTime", birthTime);
+    if (name.trim()) params.set("name", name.trim());
 
     router.push(`/result?${params.toString()}`);
   }
@@ -91,6 +93,18 @@ export default function HomePage() {
             <p className="sub">정확한 정보일수록 더 섬세한 해석이 가능해요.</p>
 
             <form onSubmit={handleSubmit}>
+              <div className="field">
+                <label htmlFor="userName">닉네임 (선택)</label>
+                <input
+                  id="userName"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="예: 은수"
+                  maxLength={20}
+                />
+              </div>
+
               <div className="field">
                 <label htmlFor="birthYear">생년월일</label>
                 <div className="date-select-row">
@@ -243,20 +257,4 @@ export default function HomePage() {
                 <span className="mark">三</span>
                 <h3>나만의 별자리</h3>
                 <p>당신의 정보로 그려진 고유한 별자리를 받아보세요.</p>
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      <footer className="site-footer">
-        <hr className="divider" style={{ marginBottom: 24 }} />© 은하수. 모든
-        해석은 오락 목적으로 제공됩니다.
-        <div className="footer-links">
-          <a href="/privacy">개인정보처리방침</a>
-          <a href="/terms">이용약관</a>
-        </div>
-      </footer>
-    </>
-  );
-}
+              
