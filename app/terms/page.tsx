@@ -69,7 +69,7 @@ export default function TermsPage() {
 
           <section>
             <h2>제7조 (문의처)</h2>
-            <p>서비스 관련 문의: (운영자 이메일 주소를 입력해주세요)</p>
+            <p>서비스 관련 문의: hushmoon.radio@gmail.com</p>
           </section>
         </div>
       </main>
