@@ -18,11 +18,14 @@ export default function CompatibilityForm() {
   const params = useSearchParams();
   const router = useRouter();
 
+  const p1Name = params.get("p1Name") ?? "";
   const p1BirthDate = params.get("p1BirthDate") ?? "";
   const p1BirthTime = params.get("p1BirthTime") ?? "";
   const p1CalendarType = params.get("p1CalendarType") ?? "solar";
   const p1Gender = params.get("p1Gender") ?? "unspecified";
 
+  const [myName, setMyName] = useState(p1Name);
+  const [friendName, setFriendName] = useState("");
   const [year, setYear] = useState("");
   const [month, setMonth] = useState("");
   const [day, setDay] = useState("");
@@ -70,6 +73,8 @@ export default function CompatibilityForm() {
     });
     if (p1BirthTime) searchParams.set("p1BirthTime", p1BirthTime);
     if (birthTime) searchParams.set("p2BirthTime", birthTime);
+    if (myName.trim()) searchParams.set("p1Name", myName.trim());
+    if (friendName.trim()) searchParams.set("p2Name", friendName.trim());
 
     router.push(`/compatibility/result?${searchParams.toString()}`);
   }
@@ -81,6 +86,31 @@ export default function CompatibilityForm() {
         <p className="sub">두 사람의 기운이 어떻게 어우러지는지 봐드릴게요.</p>
 
         <form onSubmit={handleSubmit}>
+          <div className="field-row">
+            <div className="field">
+              <label htmlFor="myName">내 닉네임 (선택)</label>
+              <input
+                id="myName"
+                type="text"
+                value={myName}
+                onChange={(e) => setMyName(e.target.value)}
+                placeholder="예: 은수"
+                maxLength={20}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="friendName">친구 닉네임 (선택)</label>
+              <input
+                id="friendName"
+                type="text"
+                value={friendName}
+                onChange={(e) => setFriendName(e.target.value)}
+                placeholder="예: 하늘"
+                maxLength={20}
+              />
+            </div>
+          </div>
+
           <div className="field">
             <label htmlFor="friendYear">친구 생년월일</label>
             <div className="date-select-row">
