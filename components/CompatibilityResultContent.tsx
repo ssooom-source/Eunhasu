@@ -18,11 +18,13 @@ export default function CompatibilityResultContent() {
   const params = useSearchParams();
   const router = useRouter();
 
+  const p1Name = params.get("p1Name") ?? "";
   const p1BirthDate = params.get("p1BirthDate") ?? "";
   const p1BirthTime = params.get("p1BirthTime") ?? "";
   const p1CalendarType = params.get("p1CalendarType") ?? "solar";
   const p1Gender = params.get("p1Gender") ?? "unspecified";
 
+  const p2Name = params.get("p2Name") ?? "";
   const p2BirthDate = params.get("p2BirthDate") ?? "";
   const p2BirthTime = params.get("p2BirthTime") ?? "";
   const p2CalendarType = params.get("p2CalendarType") ?? "solar";
@@ -50,12 +52,14 @@ export default function CompatibilityResultContent() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             person1: {
+              name: p1Name || undefined,
               birthDate: p1BirthDate,
               birthTime: p1BirthTime || undefined,
               calendarType: p1CalendarType,
               gender: p1Gender,
             },
             person2: {
+              name: p2Name || undefined,
               birthDate: p2BirthDate,
               birthTime: p2BirthTime || undefined,
               calendarType: p2CalendarType,
@@ -88,10 +92,13 @@ export default function CompatibilityResultContent() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [p1BirthDate, p1BirthTime, p1CalendarType, p1Gender, p2BirthDate, p2BirthTime, p2CalendarType, p2Gender]);
+  }, [p1Name, p1BirthDate, p1BirthTime, p1CalendarType, p1Gender, p2Name, p2BirthDate, p2BirthTime, p2CalendarType, p2Gender]);
 
   const seedKeyA = `${p1BirthDate}|${p1BirthTime}|${p1CalendarType}|${p1Gender}`;
   const seedKeyB = `${p2BirthDate}|${p2BirthTime}|${p2CalendarType}|${p2Gender}`;
+
+  const labelA = p1Name || "나";
+  const labelB = p2Name || "친구";
 
   if (status === "loading") {
     return (
@@ -122,9 +129,15 @@ export default function CompatibilityResultContent() {
       </div>
 
       <div className="constellation-pair">
-        <Constellation seedKey={seedKeyA} />
+        <div className="constellation-person">
+          <Constellation seedKey={seedKeyA} />
+          <span className="constellation-name">{labelA}</span>
+        </div>
         <span className="constellation-link">✦</span>
-        <Constellation seedKey={seedKeyB} />
+        <div className="constellation-person">
+          <Constellation seedKey={seedKeyB} />
+          <span className="constellation-name">{labelB}</span>
+        </div>
       </div>
 
       <div className="result-card">
