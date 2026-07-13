@@ -181,7 +181,8 @@ export default function ResultContent() {
         <div className="result-block">
           <span className="label">적성과 방향</span>
           <p>{result.career}</p>
-          {result.recommendedJobs?.length > 0 && (
+                    {Array.isArray(result.recommendedJobs) &&
+            result.recommendedJobs.length > 0 && (
             <div className="job-chips">
               {result.recommendedJobs.map((job, i) => (
                 <span key={i} className="job-chip">
