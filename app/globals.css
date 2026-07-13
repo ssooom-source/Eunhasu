@@ -541,8 +541,24 @@ main {
 .result-actions {
   display: flex;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 40px;
+}
+
+.constellation-pair {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 30px auto 40px;
+  flex-wrap: wrap;
+}
+
+.constellation-link {
+  color: var(--gold);
+  font-size: 20px;
+  margin: 0 4px;
 }
 
 .loading-state,
