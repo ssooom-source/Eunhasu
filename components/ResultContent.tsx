@@ -23,6 +23,7 @@ export default function ResultContent() {
   const params = useSearchParams();
   const router = useRouter();
 
+  const name = params.get("name") ?? "";
   const birthDate = params.get("birthDate") ?? "";
   const birthTime = params.get("birthTime") ?? "";
   const calendarType = params.get("calendarType") ?? "solar";
@@ -49,6 +50,7 @@ export default function ResultContent() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            name: name || undefined,
             birthDate,
             birthTime: birthTime || undefined,
             calendarType,
@@ -80,7 +82,7 @@ export default function ResultContent() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [birthDate, birthTime, calendarType, gender]);
+  }, [name, birthDate, birthTime, calendarType, gender]);
 
   const seedKey = `${birthDate}|${birthTime}|${calendarType}|${gender}`;
 
@@ -140,6 +142,7 @@ export default function ResultContent() {
   return (
     <main className="result-page">
       <div className="result-header">
+        {name && <p className="result-name">{name}님의 사주</p>}
         <span className="eyebrow">{result.keyword}</span>
       </div>
 
@@ -225,7 +228,7 @@ export default function ResultContent() {
             calendarType
           )}&p1Gender=${encodeURIComponent(gender)}${
             birthTime ? `&p1BirthTime=${encodeURIComponent(birthTime)}` : ""
-          }`}
+          }${name ? `&p1Name=${encodeURIComponent(name)}` : ""}`}
           className="btn ghost"
         >
           친구와 궁합 보기
@@ -234,7 +237,6 @@ export default function ResultContent() {
           다시 보기
         </a>
       </div>
-      
     </main>
   );
 }
