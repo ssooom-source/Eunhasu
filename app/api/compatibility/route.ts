@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 
 type PersonInput = {
+  name?: string;
   birthDate: string;
   birthTime?: string;
   calendarType: "solar" | "lunar";
@@ -31,13 +32,61 @@ function isValidDate(value: string): boolean {
   return !Number.isNaN(d.getTime());
 }
 
-function describePerson(label: string, p: PersonInput): string {
+function describePerson(fallbackLabel: string, p: PersonInput): string {
   const calendarLabel = p.calendarType === "solar" ? "양력" : "음력";
   const timeLabel = p.birthTime ? p.birthTime : "시간 정보 없음";
   const genderLabel =
     p.gender === "male" ? "남성" : p.gender === "female" ? "여성" : "미지정";
+  const label = p.name?.trim() ? p.name.trim() : fallbackLabel;
   return `${label}: ${p.birthDate} (${calendarLabel}), 태어난 시간 ${timeLabel}, 성별 ${genderLabel}`;
 }
+
+const COMPATIBILITY_TOOL = {
+  name: "submit_compatibility",
+  description: "생성한 궁합 해석 결과를 제출합니다.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      headline: {
+        type: "string",
+        description: "두 사람의 궁합을 한 문장으로 요약하는 시적인 제목 (15자 내외)",
+      },
+      vibeLabel: {
+        type: "string",
+        description: "두 사람의 기운 조합을 상징하는 두 글자 내외의 키워드 (예: 상생, 조화, 자극)",
+      },
+      overallVibe: {
+        type: "string",
+        description: "전체적인 기운의 어우러짐에 대한 3문장",
+      },
+      strengths: {
+        type: "string",
+        description: "이 관계에서 자연스럽게 잘 맞는 부분 2~3문장",
+      },
+      challenges: {
+        type: "string",
+        description: "서로 다르거나 유의하면 좋을 부분 2~3문장",
+      },
+      advice: {
+        type: "string",
+        description: "두 사람의 관계를 더 좋게 만들 실천적 조언 2문장",
+      },
+      closing: {
+        type: "string",
+        description: "따뜻하게 마무리하는 1문장",
+      },
+    },
+    required: [
+      "headline",
+      "vibeLabel",
+      "overallVibe",
+      "strengths",
+      "challenges",
+      "advice",
+      "closing",
+    ],
+  },
+};
 
 export async function POST(req: NextRequest) {
   let body: RequestBody;
@@ -77,21 +126,10 @@ export async function POST(req: NextRequest) {
 - 실제 만세력 계산을 하지 않으므로 단정적인 미래 예측이나 관계의 성패를 확정짓는 표현은 피하세요.
 - 이 서비스는 오락 목적임을 문체에서 은근히 드러내되, 직접적으로 "이것은 오락입니다"라고 딱딱하게 말하지는 마세요.
 - 우정, 연인, 가족, 동료 등 관계의 종류를 특정하지 말고 범용적으로 "두 사람의 관계"라는 표현을 쓰세요.
+- 사용자가 이름/닉네임을 제공했다면 본문에서 그 이름으로 다정하게 불러주세요. 이름이 없으면 "두 사람"처럼 범용적으로 표현하세요.
 - 따뜻하면서도 균형 잡힌 시각으로 작성하세요. 한쪽으로 치우쳐 좋다/나쁘다로 단정하지 말고, 강점과 유의할 점을 함께 다루세요.
-- 반드시 아래 JSON 스키마만 출력하세요. 다른 설명, 마크다운, 코드블록 없이 순수 JSON만 응답하세요.
-
-스키마 (각 항목은 반드시 지정된 문장 수를 넘지 않도록 간결하게 작성하세요):
-{
-  "headline": "두 사람의 궁합을 한 문장으로 요약하는 시적인 제목 (15자 내외)",
-  "vibeLabel": "두 사람의 기운 조합을 상징하는 두 글자 내외의 키워드 (예: 상생, 조화, 자극)",
-  "overallVibe": "전체적인 기운의 어우러짐에 대한 3문장",
-  "strengths": "이 관계에서 자연스럽게 잘 맞는 부분 2~3문장",
-  "challenges": "서로 다르거나 유의하면 좋을 부분 2~3문장",
-  "advice": "두 사람의 관계를 더 좋게 만들 실천적 조언 2문장",
-  "closing": "따뜻하게 마무리하는 1문장"
-}
-
-중요: 전체 응답은 반드시 완결된 JSON 객체로 끝나야 합니다. 문장 수를 넘기지 말고, 마지막 "}"로 정확히 마무리하세요.`;
+- 텍스트 값 안에서는 큰따옴표(")를 사용하지 마세요. 강조가 필요하면 작은따옴표(')를 쓰세요.
+- 반드시 submit_compatibility 도구를 호출해서 결과를 제출하세요. 도구 호출 없이 텍스트로 답하지 마세요.`;
 
   const userPrompt = `${describePerson("사람 A", person1)}
 ${describePerson("사람 B", person2)}
@@ -104,22 +142,18 @@ ${describePerson("사람 B", person2)}
       max_tokens: 1600,
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],
+      tools: [COMPATIBILITY_TOOL],
+      tool_choice: { type: "tool", name: "submit_compatibility" },
     });
 
-    const textBlock = message.content.find((block) => block.type === "text");
-    if (!textBlock || textBlock.type !== "text") {
-      throw new Error("텍스트 블록 없음");
+    const toolUseBlock = message.content.find(
+      (block) => block.type === "tool_use"
+    );
+    if (!toolUseBlock || toolUseBlock.type !== "tool_use") {
+      throw new Error("도구 호출 결과 없음");
     }
 
-    let cleaned = textBlock.text.replace(/```json|```/g, "").trim();
-    const firstBrace = cleaned.indexOf("{");
-    const lastBrace = cleaned.lastIndexOf("}");
-    if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
-      throw new Error("JSON 형식을 찾을 수 없음");
-    }
-    cleaned = cleaned.slice(firstBrace, lastBrace + 1);
-
-    return JSON.parse(cleaned) as CompatibilityResult;
+    return toolUseBlock.input as CompatibilityResult;
   }
 
   try {
