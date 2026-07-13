@@ -66,7 +66,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko" className={`${display.variable} ${body.variable}`}>
+      <head>
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8671116107075112"
+          crossOrigin="anonymous"
+        ></script>
+      </head>
       <body>{children}</body>
     </html>
   );
 }
+
