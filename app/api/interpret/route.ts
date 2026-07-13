@@ -110,7 +110,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const cleaned = textBlock.text.replace(/```json|```/g, "").trim();
+let cleaned = textBlock.text.replace(/```json|```/g, "").trim();
+    const firstBrace = cleaned.indexOf("{");
+    const lastBrace = cleaned.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1) {
+      cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+    }
     let parsed: InterpretationResult;
     try {
       parsed = JSON.parse(cleaned);
