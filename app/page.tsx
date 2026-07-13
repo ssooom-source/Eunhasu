@@ -1,260 +1,242 @@
 "use client";
 
-import { useState, FormEvent } from "react";
-import { useRouter } from "next/navigation";
-import Starfield from "@/components/Starfield";
+import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import Constellation from "@/components/Constellation";
 
-const currentYear = new Date().getFullYear();
-const YEAR_OPTIONS = Array.from(
-  { length: currentYear - 1920 + 1 },
-  (_, i) => currentYear - i
-);
-const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => i + 1);
+type InterpretationResult = {
+  headline: string;
+  keyword: string;
+  elements: string;
+  personality: string;
+  love: string;
+  wealth: string;
+  career: string;
+  recommendedJobs: string[];
+  similarFigure: string;
+  similarFigureReason: string;
+  advice: string;
+  closing: string;
+};
 
-function daysInMonth(year: number, month: number) {
-  return new Date(year, month, 0).getDate();
-}
-
-export default function HomePage() {
+export default function ResultContent() {
+  const params = useSearchParams();
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [year, setYear] = useState("");
-  const [month, setMonth] = useState("");
-  const [day, setDay] = useState("");
-  const [birthTime, setBirthTime] = useState("");
-  const [calendarType, setCalendarType] = useState<"solar" | "lunar">("solar");
-  const [gender, setGender] = useState<"male" | "female" | "unspecified">(
-    "unspecified"
+
+  const name = params.get("name") ?? "";
+  const birthDate = params.get("birthDate") ?? "";
+  const birthTime = params.get("birthTime") ?? "";
+  const calendarType = params.get("calendarType") ?? "solar";
+  const gender = params.get("gender") ?? "unspecified";
+
+  const [status, setStatus] = useState<"loading" | "done" | "error">(
+    "loading"
   );
-  const [error, setError] = useState("");
+  const [result, setResult] = useState<InterpretationResult | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  const dayOptions = year && month
-    ? Array.from(
-        { length: daysInMonth(Number(year), Number(month)) },
-        (_, i) => i + 1
-      )
-    : Array.from({ length: 31 }, (_, i) => i + 1);
-
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError("");
-
-    if (!year || !month || !day) {
-      setError("생년월일을 모두 선택해주세요.");
+  useEffect(() => {
+    if (!birthDate) {
+      router.replace("/");
       return;
     }
 
-    const birthDate = `${year}-${String(month).padStart(2, "0")}-${String(
-      day
-    ).padStart(2, "0")}`;
+    let cancelled = false;
 
-    const params = new URLSearchParams({
-      birthDate,
-      calendarType,
-      gender,
-    });
-    if (birthTime) params.set("birthTime", birthTime);
-    if (name.trim()) params.set("name", name.trim());
+    async function run() {
+      setStatus("loading");
+      try {
+        const res = await fetch("/api/interpret", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: name || undefined,
+            birthDate,
+            birthTime: birthTime || undefined,
+            calendarType,
+            gender,
+          }),
+        });
+        const data = await res.json();
 
-    router.push(`/result?${params.toString()}`);
+        if (cancelled) return;
+
+        if (!res.ok) {
+          setErrorMsg(data.error ?? "해석에 실패했습니다.");
+          setStatus("error");
+          return;
+        }
+
+        setResult(data.result);
+        setStatus("done");
+      } catch {
+        if (!cancelled) {
+          setErrorMsg("네트워크 오류가 발생했습니다. 다시 시도해주세요.");
+          setStatus("error");
+        }
+      }
+    }
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name, birthDate, birthTime, calendarType, gender]);
+
+  const seedKey = `${birthDate}|${birthTime}|${calendarType}|${gender}`;
+
+  const [shareLabel, setShareLabel] = useState("결과 공유하기");
+
+  async function handleShare() {
+    const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+    const shareText = result
+      ? `나의 사주 키워드는 "${result.keyword}", ${result.headline}\n은하수에서 내 사주도 확인해보세요.`
+      : "은하수에서 내 사주를 확인해보세요.";
+
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: "은하수 | AI 사주 해석",
+          text: shareText,
+          url: shareUrl,
+        });
+      } catch {
+        // 사용자가 공유를 취소한 경우 등은 조용히 무시
+      }
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareLabel("링크를 복사했어요");
+      setTimeout(() => setShareLabel("결과 공유하기"), 2000);
+    } catch {
+      setShareLabel("복사에 실패했어요");
+      setTimeout(() => setShareLabel("결과 공유하기"), 2000);
+    }
   }
 
+  if (status === "loading") {
+    return (
+      <div className="loading-state">
+        <div className="spinner" />
+        <p>당신의 하늘을 읽는 중이에요. 잠시만 기다려주세요.</p>
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div className="error-state">
+        <p>{errorMsg}</p>
+        <a href="/" className="btn ghost">
+          다시 시도하기
+        </a>
+      </div>
+    );
+  }
+
+  if (!result) return null;
+
   return (
-    <>
-      <Starfield />
-      <header className="site-header">
-        <div className="logo">
-          은<span>하</span>수
+    <main className="result-page">
+      <div className="result-header">
+        {name && <p className="result-name">{name}님의 사주</p>}
+        <span className="eyebrow">{result.keyword}</span>
+      </div>
+
+      <div className="constellation-wrap">
+        <Constellation seedKey={seedKey} />
+      </div>
+
+      <div className="result-card">
+        <h2
+          style={{
+            fontFamily: "var(--font-display)",
+            textAlign: "center",
+            fontSize: "26px",
+            marginBottom: "8px",
+          }}
+        >
+          {result.headline}
+        </h2>
+
+        <div className="result-block">
+          <span className="label">오행의 기운</span>
+          <p>{result.elements}</p>
         </div>
-      </header>
+        <div className="result-block">
+          <span className="label">타고난 성격</span>
+          <p>{result.personality}</p>
+        </div>
+        <div className="result-block">
+          <span className="label">연애와 관계</span>
+          <p>{result.love}</p>
+        </div>
+        <div className="result-block">
+          <span className="label">재물과 일</span>
+          <p>{result.wealth}</p>
+        </div>
+        <div className="result-block">
+          <span className="label">적성과 방향</span>
+          <p>{result.career}</p>
+          {result.recommendedJobs?.length > 0 && (
+            <div className="job-chips">
+              {result.recommendedJobs.map((job, i) => (
+                <span key={i} className="job-chip">
+                  {job}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
 
-      <main>
-        <section className="hero">
-          <span className="eyebrow hero-eyebrow">AI 사주 해석</span>
-          <h1>
-            태어난 순간의 하늘이
-            <br />
-            <em>당신만의 별자리</em>를 그립니다
-          </h1>
-          <p className="lede">
-            생년월일을 입력하면 AI가 당신의 기운과 흐름을 읽어
-            이야기로 들려드려요. 나만의 별자리도 함께 그려드립니다.
-          </p>
-          <div className="hero-cta">
-            <a href="#form" className="btn">
-              내 사주 보러 가기
-            </a>
+        {result.similarFigure && (
+          <div className="result-block similar-figure">
+            <span className="label">기운이 통하는 인물</span>
+            <h3>{result.similarFigure}</h3>
+            <p>{result.similarFigureReason}</p>
           </div>
-        </section>
+        )}
 
-        <section className="form-section" id="form">
-          <div className="form-card">
-            <h2>생년월일을 알려주세요</h2>
-            <p className="sub">정확한 정보일수록 더 섬세한 해석이 가능해요.</p>
+        <div className="result-block">
+          <span className="label">지금 필요한 것</span>
+          <p>{result.advice}</p>
+        </div>
 
-            <form onSubmit={handleSubmit}>
-              <div className="field">
-                <label htmlFor="userName">닉네임 (선택)</label>
-                <input
-                  id="userName"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="예: 은수"
-                  maxLength={20}
-                />
-              </div>
+        <p
+          style={{
+            textAlign: "center",
+            marginTop: "30px",
+            color: "var(--text-muted)",
+            fontSize: "14px",
+          }}
+        >
+          {result.closing}
+        </p>
+      </div>
 
-              <div className="field">
-                <label htmlFor="birthYear">생년월일</label>
-                <div className="date-select-row">
-                  <select
-                    id="birthYear"
-                    value={year}
-                    onChange={(e) => setYear(e.target.value)}
-                    required
-                  >
-                    <option value="" disabled>
-                      년
-                    </option>
-                    {YEAR_OPTIONS.map((y) => (
-                      <option key={y} value={y}>
-                        {y}년
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    id="birthMonth"
-                    value={month}
-                    onChange={(e) => setMonth(e.target.value)}
-                    required
-                  >
-                    <option value="" disabled>
-                      월
-                    </option>
-                    {MONTH_OPTIONS.map((m) => (
-                      <option key={m} value={m}>
-                        {m}월
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    id="birthDay"
-                    value={day}
-                    onChange={(e) => setDay(e.target.value)}
-                    required
-                  >
-                    <option value="" disabled>
-                      일
-                    </option>
-                    {dayOptions.map((d) => (
-                      <option key={d} value={d}>
-                        {d}일
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="field-row">
-                <div className="field">
-                  <label htmlFor="birthTime">태어난 시간 (선택)</label>
-                  <input
-                    id="birthTime"
-                    type="time"
-                    value={birthTime}
-                    onChange={(e) => setBirthTime(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="field">
-                <label>양력 / 음력</label>
-                <div className="radio-group">
-                  <label>
-                    <input
-                      type="radio"
-                      name="calendarType"
-                      checked={calendarType === "solar"}
-                      onChange={() => setCalendarType("solar")}
-                    />
-                    양력
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="calendarType"
-                      checked={calendarType === "lunar"}
-                      onChange={() => setCalendarType("lunar")}
-                    />
-                    음력
-                  </label>
-                </div>
-              </div>
-
-              <div className="field">
-                <label>성별 (선택)</label>
-                <div className="radio-group">
-                  <label>
-                    <input
-                      type="radio"
-                      name="gender"
-                      checked={gender === "female"}
-                      onChange={() => setGender("female")}
-                    />
-                    여성
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="gender"
-                      checked={gender === "male"}
-                      onChange={() => setGender("male")}
-                    />
-                    남성
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="gender"
-                      checked={gender === "unspecified"}
-                      onChange={() => setGender("unspecified")}
-                    />
-                    선택 안 함
-                  </label>
-                </div>
-              </div>
-
-              <button type="submit" className="btn">
-                별자리 해석 보기
-              </button>
-
-              {error && <p className="form-error">{error}</p>}
-
-              <p className="form-note">
-                본 서비스의 해석은 재미와 자기 이해를 위한 콘텐츠이며,
-                의학·법률·재정적 조언을 대신하지 않습니다.
-              </p>
-            </form>
-          </div>
-        </section>
-
-        <section className="how">
-          <div className="wrap">
-            <span className="eyebrow">HOW IT WORKS</span>
-            <div className="how-grid">
-              <div className="how-item">
-                <span className="mark">一</span>
-                <h3>생년월일 입력</h3>
-                <p>태어난 날짜와 시간을 알려주세요.</p>
-              </div>
-              <div className="how-item">
-                <span className="mark">二</span>
-                <h3>AI가 기운을 읽어요</h3>
-                <p>오행과 흐름을 바탕으로 이야기를 엮어냅니다.</p>
-              </div>
-              <div className="how-item">
-                <span className="mark">三</span>
-                <h3>나만의 별자리</h3>
-                <p>당신의 정보로 그려진 고유한 별자리를 받아보세요.</p>
-              
+      <div className="result-actions">
+        <button onClick={handleShare} className="btn">
+          {shareLabel}
+        </button>
+        <a
+          href={`/compatibility?p1BirthDate=${encodeURIComponent(
+            birthDate
+          )}&p1CalendarType=${encodeURIComponent(
+            calendarType
+          )}&p1Gender=${encodeURIComponent(gender)}${
+            birthTime ? `&p1BirthTime=${encodeURIComponent(birthTime)}` : ""
+          }${name ? `&p1Name=${encodeURIComponent(name)}` : ""}`}
+          className="btn ghost"
+        >
+          친구와 궁합 보기
+        </a>
+        <a href="/" className="btn ghost">
+          다시 보기
+        </a>
+      </div>
+    </main>
+  );
+}
