@@ -105,9 +105,10 @@ export async function POST(req: NextRequest) {
 위 정보를 바탕으로 사주를 해석해주세요.`;
 
   async function callClaude() {
-    const message = await client.messages.create({
+        const message = await client.messages.create({
       model: "claude-sonnet-5",
       max_tokens: 2048,
+      temperature: 0,
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],
     });
