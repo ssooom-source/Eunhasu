@@ -18,6 +18,9 @@ type InterpretationResult = {
   love: string;
   wealth: string;
   career: string;
+  recommendedJobs: string[];
+  similarFigure: string;
+  similarFigureReason: string;
   advice: string;
   closing: string;
 };
@@ -73,6 +76,8 @@ export async function POST(req: NextRequest) {
 - 실제 만세력 계산을 하지 않으므로 단정적인 미래 예측이나 의학적·법적·재정적 조언처럼 들리는 단정적 문장은 피하세요.
 - 이 서비스는 오락 목적임을 문체에서 은근히 드러내되, 직접적으로 "이것은 오락입니다"라고 딱딱하게 말하지는 마세요.
 - 따뜻하고 시적이면서도 구체적인 문장으로 작성하세요. 뻔한 별자리 운세 같은 문구는 피하세요.
+- recommendedJobs는 뻔한 대분류(예: "회사원")가 아니라 구체적인 직무명으로 3개 제시하세요 (예: "UX 리서처", "브랜드 마케터", "임상 심리상담사").
+- similarFigure는 널리 알려진 역사적 인물이나 문화적 아이콘 중에서 골라, 이 사람의 기운·성향과 "느낌이 통하는" 인물로 가볍게 소개하세요. 실존 인물의 실제 사주를 계산해 비교하는 것이 아니라 성향의 유사성을 재미로 표현하는 것임을 톤에서 드러내세요. 논란의 소지가 있는 정치인이나 현재 활동 중인 민감한 인물은 피하세요.
 - 반드시 아래 JSON 스키마만 출력하세요. 다른 설명, 마크다운, 코드블록 없이 순수 JSON만 응답하세요.
 
 스키마 (각 항목은 반드시 지정된 문장 수를 넘지 않도록 간결하게 작성하세요):
@@ -83,7 +88,10 @@ export async function POST(req: NextRequest) {
   "personality": "타고난 성격과 기질에 대한 3문장",
   "love": "연애와 관계의 흐름에 대한 3문장",
   "wealth": "재물운과 일에 대한 태도에 대한 3문장",
-  "career": "적성과 일/커리어 방향에 대한 3문장",
+  "career": "적성과 일하는 방식에 대한 2문장 (구체적 직업명은 recommendedJobs에 따로 작성)",
+  "recommendedJobs": ["구체적 직무명1", "구체적 직무명2", "구체적 직무명3"],
+  "similarFigure": "기운이 비슷한 역사적 인물/문화 아이콘의 이름",
+  "similarFigureReason": "왜 그 인물과 통하는지 1~2문장",
   "advice": "지금 이 사람에게 도움이 될 실천적 조언 2문장",
   "closing": "따뜻하게 마무리하는 1문장"
 }
@@ -125,7 +133,6 @@ export async function POST(req: NextRequest) {
     try {
       parsed = await callClaude();
     } catch {
-      // 첫 시도에서 형식이 깨졌다면 한 번 더 시도
       parsed = await callClaude();
     }
 
