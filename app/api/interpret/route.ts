@@ -31,6 +31,80 @@ function isValidDate(value: string): boolean {
   return !Number.isNaN(d.getTime());
 }
 
+const INTERPRETATION_TOOL = {
+  name: "submit_interpretation",
+  description: "생성한 사주 해석 결과를 제출합니다.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      headline: {
+        type: "string",
+        description: "이 사람의 사주를 한 문장으로 요약하는 시적인 제목 (15자 내외)",
+      },
+      keyword: {
+        type: "string",
+        description: "이 사람의 기운을 상징하는 두 글자 내외의 키워드 (예: 목화, 수생, 금극)",
+      },
+      elements: {
+        type: "string",
+        description: "오행(목화토금수) 중 도드라지는 기운에 대한 2문장 설명",
+      },
+      personality: {
+        type: "string",
+        description: "타고난 성격과 기질에 대한 3문장",
+      },
+      love: {
+        type: "string",
+        description: "연애와 관계의 흐름에 대한 3문장",
+      },
+      wealth: {
+        type: "string",
+        description: "재물운과 일에 대한 태도에 대한 3문장",
+      },
+      career: {
+        type: "string",
+        description: "적성과 일하는 방식에 대한 2문장 (구체적 직업명은 별도 필드에 작성)",
+      },
+      recommendedJobs: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "뻔한 대분류가 아닌 구체적인 직무명 3개 (예: UX 리서처, 브랜드 마케터, 임상 심리상담사)",
+      },
+      similarFigure: {
+        type: "string",
+        description: "기운이 비슷한 역사적 인물/문화 아이콘의 이름",
+      },
+      similarFigureReason: {
+        type: "string",
+        description: "왜 그 인물과 통하는지 1~2문장",
+      },
+      advice: {
+        type: "string",
+        description: "지금 이 사람에게 도움이 될 실천적 조언 2문장",
+      },
+      closing: {
+        type: "string",
+        description: "따뜻하게 마무리하는 1문장",
+      },
+    },
+    required: [
+      "headline",
+      "keyword",
+      "elements",
+      "personality",
+      "love",
+      "wealth",
+      "career",
+      "recommendedJobs",
+      "similarFigure",
+      "similarFigureReason",
+      "advice",
+      "closing",
+    ],
+  },
+};
+
 export async function POST(req: NextRequest) {
   let body: RequestBody;
   try {
@@ -76,27 +150,9 @@ export async function POST(req: NextRequest) {
 - 실제 만세력 계산을 하지 않으므로 단정적인 미래 예측이나 의학적·법적·재정적 조언처럼 들리는 단정적 문장은 피하세요.
 - 이 서비스는 오락 목적임을 문체에서 은근히 드러내되, 직접적으로 "이것은 오락입니다"라고 딱딱하게 말하지는 마세요.
 - 따뜻하고 시적이면서도 구체적인 문장으로 작성하세요. 뻔한 별자리 운세 같은 문구는 피하세요.
-- recommendedJobs는 뻔한 대분류(예: "회사원")가 아니라 구체적인 직무명으로 3개 제시하세요 (예: "UX 리서처", "브랜드 마케터", "임상 심리상담사").
 - similarFigure는 널리 알려진 역사적 인물이나 문화적 아이콘 중에서 골라, 이 사람의 기운·성향과 "느낌이 통하는" 인물로 가볍게 소개하세요. 실존 인물의 실제 사주를 계산해 비교하는 것이 아니라 성향의 유사성을 재미로 표현하는 것임을 톤에서 드러내세요. 논란의 소지가 있는 정치인이나 현재 활동 중인 민감한 인물은 피하세요.
-- 반드시 아래 JSON 스키마만 출력하세요. 다른 설명, 마크다운, 코드블록 없이 순수 JSON만 응답하세요.
-
-스키마 (각 항목은 반드시 지정된 문장 수를 넘지 않도록 간결하게 작성하세요):
-{
-  "headline": "이 사람의 사주를 한 문장으로 요약하는 시적인 제목 (15자 내외)",
-  "keyword": "이 사람의 기운을 상징하는 두 글자 내외의 키워드 (예: 목화, 수생, 금극)",
-  "elements": "오행(목화토금수) 중 도드라지는 기운에 대한 2문장 설명",
-  "personality": "타고난 성격과 기질에 대한 3문장",
-  "love": "연애와 관계의 흐름에 대한 3문장",
-  "wealth": "재물운과 일에 대한 태도에 대한 3문장",
-  "career": "적성과 일하는 방식에 대한 2문장 (구체적 직업명은 recommendedJobs에 따로 작성)",
-  "recommendedJobs": ["구체적 직무명1", "구체적 직무명2", "구체적 직무명3"],
-  "similarFigure": "기운이 비슷한 역사적 인물/문화 아이콘의 이름",
-  "similarFigureReason": "왜 그 인물과 통하는지 1~2문장",
-  "advice": "지금 이 사람에게 도움이 될 실천적 조언 2문장",
-  "closing": "따뜻하게 마무리하는 1문장"
-}
-
-중요: 전체 응답은 반드시 완결된 JSON 객체로 끝나야 합니다. 문장 수를 넘기지 말고, 마지막 "}"로 정확히 마무리하세요.`;
+- 텍스트 값 안에서는 큰따옴표(")를 사용하지 마세요. 강조가 필요하면 작은따옴표(')를 쓰세요.
+- 반드시 submit_interpretation 도구를 호출해서 결과를 제출하세요. 도구 호출 없이 텍스트로 답하지 마세요.`;
 
   const userPrompt = `생년월일: ${birthDate} (${calendarLabel})
 태어난 시간: ${timeLabel}
@@ -105,28 +161,24 @@ export async function POST(req: NextRequest) {
 위 정보를 바탕으로 사주를 해석해주세요.`;
 
   async function callClaude() {
-        const message = await client.messages.create({
+    const message = await client.messages.create({
       model: "claude-sonnet-5",
       max_tokens: 2048,
       temperature: 0,
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],
+      tools: [INTERPRETATION_TOOL],
+      tool_choice: { type: "tool", name: "submit_interpretation" },
     });
 
-    const textBlock = message.content.find((block) => block.type === "text");
-    if (!textBlock || textBlock.type !== "text") {
-      throw new Error("텍스트 블록 없음");
+    const toolUseBlock = message.content.find(
+      (block) => block.type === "tool_use"
+    );
+    if (!toolUseBlock || toolUseBlock.type !== "tool_use") {
+      throw new Error("도구 호출 결과 없음");
     }
 
-    let cleaned = textBlock.text.replace(/```json|```/g, "").trim();
-    const firstBrace = cleaned.indexOf("{");
-    const lastBrace = cleaned.lastIndexOf("}");
-    if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
-      throw new Error("JSON 형식을 찾을 수 없음");
-    }
-    cleaned = cleaned.slice(firstBrace, lastBrace + 1);
-
-    return JSON.parse(cleaned) as InterpretationResult;
+    return toolUseBlock.input as InterpretationResult;
   }
 
   try {
@@ -141,7 +193,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("Anthropic API error:", err);
     return NextResponse.json(
-      { error: "해석 결과 형식을 읽는 데 실패했습니다. 다시 시도해주세요." },
+      { error: "해석 결과를 읽는 데 실패했습니다. 다시 시도해주세요." },
       { status: 502 }
     );
   }
