@@ -12,6 +12,9 @@ type InterpretationResult = {
   love: string;
   wealth: string;
   career: string;
+  recommendedJobs: string[];
+  similarFigure: string;
+  similarFigureReason: string;
   advice: string;
   closing: string;
 };
@@ -81,6 +84,37 @@ export default function ResultContent() {
 
   const seedKey = `${birthDate}|${birthTime}|${calendarType}|${gender}`;
 
+  const [shareLabel, setShareLabel] = useState("결과 공유하기");
+
+  async function handleShare() {
+    const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+    const shareText = result
+      ? `나의 사주 키워드는 "${result.keyword}", ${result.headline}\n은하수에서 내 사주도 확인해보세요.`
+      : "은하수에서 내 사주를 확인해보세요.";
+
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: "은하수 | AI 사주 해석",
+          text: shareText,
+          url: shareUrl,
+        });
+      } catch {
+        // 사용자가 공유를 취소한 경우 등은 조용히 무시
+      }
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareLabel("링크를 복사했어요");
+      setTimeout(() => setShareLabel("결과 공유하기"), 2000);
+    } catch {
+      setShareLabel("복사에 실패했어요");
+      setTimeout(() => setShareLabel("결과 공유하기"), 2000);
+    }
+  }
+
   if (status === "loading") {
     return (
       <div className="loading-state">
@@ -144,7 +178,25 @@ export default function ResultContent() {
         <div className="result-block">
           <span className="label">적성과 방향</span>
           <p>{result.career}</p>
+          {result.recommendedJobs?.length > 0 && (
+            <div className="job-chips">
+              {result.recommendedJobs.map((job, i) => (
+                <span key={i} className="job-chip">
+                  {job}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
+
+        {result.similarFigure && (
+          <div className="result-block similar-figure">
+            <span className="label">기운이 통하는 인물</span>
+            <h3>{result.similarFigure}</h3>
+            <p>{result.similarFigureReason}</p>
+          </div>
+        )}
+
         <div className="result-block">
           <span className="label">지금 필요한 것</span>
           <p>{result.advice}</p>
@@ -163,6 +215,9 @@ export default function ResultContent() {
       </div>
 
       <div className="result-actions">
+        <button onClick={handleShare} className="btn">
+          {shareLabel}
+        </button>
         <a href="/" className="btn ghost">
           다시 보기
         </a>
