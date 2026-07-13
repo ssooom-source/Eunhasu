@@ -1,0 +1,26 @@
+import { MetadataRoute } from "next";
+
+export default function sitemap(): MetadataRoute.Sitemap {
+  const siteUrl = "https://eunhasu-cf1c.vercel.app";
+
+  return [
+    {
+      url: siteUrl,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 1,
+    },
+    {
+      url: `${siteUrl}/privacy`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${siteUrl}/terms`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+  ];
+}
