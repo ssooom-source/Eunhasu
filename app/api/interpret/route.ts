@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { calculateSaju } from "ssaju";
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -30,6 +31,41 @@ function isValidDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const d = new Date(value);
   return !Number.isNaN(d.getTime());
+}
+
+/** 생년월일 정보로 실제 만세력(사주팔자) 데이터를 계산합니다. 실패하면 null. */
+function buildSajuData(
+  birthDate: string,
+  birthTime: string | undefined,
+  calendarType: "solar" | "lunar",
+  gender: "male" | "female" | "unspecified"
+): string | null {
+  try {
+    const [year, month, day] = birthDate.split("-").map(Number);
+    let hour = 12;
+    let minute = 0;
+    if (birthTime) {
+      const [h, m] = birthTime.split(":").map(Number);
+      if (!Number.isNaN(h)) hour = h;
+      if (!Number.isNaN(m)) minute = m;
+    }
+    const sajuGender = gender === "female" ? "여" : "남";
+
+    const result = calculateSaju({
+      year,
+      month,
+      day,
+      hour,
+      minute,
+      gender: sajuGender,
+      calendar: calendarType,
+    });
+
+    return result.toCompact();
+  } catch (err) {
+    console.error("사주 계산 실패:", err);
+    return null;
+  }
 }
 
 const INTERPRETATION_TOOL = {
@@ -145,13 +181,21 @@ export async function POST(req: NextRequest) {
   const genderLabel =
     gender === "male" ? "남성" : gender === "female" ? "여성" : "미지정";
 
-  const systemPrompt = `당신은 따뜻하고 통찰력 있는 사주 해석가입니다. 사용자의 생년월일(및 태어난 시간, 양/음력, 성별)을 바탕으로 전통 사주명리학의 정서와 어휘(오행, 기운, 십성 등)를 참고하여 이야기하듯 해석을 들려줍니다.
+  const sajuData = buildSajuData(
+    birthDate,
+    birthTime,
+    calendarType,
+    gender ?? "unspecified"
+  );
+
+  const systemPrompt = `당신은 따뜻하고 통찰력 있는 사주 해석가입니다. 아래에 실제 만세력 계산으로 산출된 사주팔자 데이터(오행, 십성, 대운 등)가 함께 제공됩니다. 이 데이터를 근거로, 전통 사주명리학의 정서와 어휘를 살려 이야기하듯 해석을 들려줍니다.
 
 규칙:
-- 실제 만세력 계산을 하지 않으므로 단정적인 미래 예측이나 의학적·법적·재정적 조언처럼 들리는 단정적 문장은 피하세요.
-- 이 서비스는 오락 목적임을 문체에서 은근히 드러내되, 직접적으로 "이것은 오락입니다"라고 딱딱하게 말하지는 마세요.
+- 반드시 제공된 실제 사주 데이터(오행 분포, 십성, 일간 등)에 근거해서 해석하세요. 데이터에 없는 내용을 임의로 지어내지 마세요.
+- 그럼에도 이 해석은 미래를 확정짓는 예언이 아니라 참고용 콘텐츠입니다. 의학적·법적·재정적 조언처럼 들리는 단정적 문장은 피하세요.
+- 이 서비스는 재미와 자기 이해를 위한 콘텐츠임을 문체에서 은근히 드러내되, 직접적으로 "이것은 오락입니다"라고 딱딱하게 말하지는 마세요.
 - 따뜻하고 시적이면서도 구체적인 문장으로 작성하세요. 뻔한 별자리 운세 같은 문구는 피하세요.
-- similarFigure는 널리 알려진 역사적 인물이나 문화적 아이콘 중에서 골라, 이 사람의 기운·성향과 "느낌이 통하는" 인물로 가볍게 소개하세요. 실존 인물의 실제 사주를 계산해 비교하는 것이 아니라 성향의 유사성을 재미로 표현하는 것임을 톤에서 드러내세요. 논란의 소지가 있는 정치인이나 현재 활동 중인 민감한 인물은 피하세요.
+- similarFigure는 널리 알려진 역사적 인물이나 문화적 아이콘 중에서 골라, 이 사람의 기운·성향과 "느낌이 통하는" 인물로 가볍게 소개하세요. 논란의 소지가 있는 정치인이나 현재 활동 중인 민감한 인물은 피하세요.
 - 텍스트 값 안에서는 큰따옴표(")를 사용하지 마세요. 강조가 필요하면 작은따옴표(')를 쓰세요.
 - 사용자가 이름/닉네임을 제공했다면 본문 곳곳에서 그 이름으로 다정하게 불러주세요. 이름이 없으면 "당신"으로 표현하세요.
 - 반드시 submit_interpretation 도구를 호출해서 결과를 제출하세요. 도구 호출 없이 텍스트로 답하지 마세요.`;
@@ -159,6 +203,12 @@ export async function POST(req: NextRequest) {
   const userPrompt = `${name ? `이름/닉네임: ${name}\n` : ""}생년월일: ${birthDate} (${calendarLabel})
 태어난 시간: ${timeLabel}
 성별: ${genderLabel}
+
+${
+  sajuData
+    ? `실제 만세력 계산 데이터:\n${sajuData}`
+    : "※ 만세력 계산에 실패하여 위 기본 정보만으로 해석합니다."
+}
 
 위 정보를 바탕으로 사주를 해석해주세요.`;
 
