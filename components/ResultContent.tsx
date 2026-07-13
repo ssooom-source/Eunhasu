@@ -218,10 +218,23 @@ export default function ResultContent() {
         <button onClick={handleShare} className="btn">
           {shareLabel}
         </button>
+        <a
+          href={`/compatibility?p1BirthDate=${encodeURIComponent(
+            birthDate
+          )}&p1CalendarType=${encodeURIComponent(
+            calendarType
+          )}&p1Gender=${encodeURIComponent(gender)}${
+            birthTime ? `&p1BirthTime=${encodeURIComponent(birthTime)}` : ""
+          }`}
+          className="btn ghost"
+        >
+          친구와 궁합 보기
+        </a>
         <a href="/" className="btn ghost">
           다시 보기
         </a>
       </div>
+      
     </main>
   );
 }
