@@ -252,6 +252,10 @@ export default function HomePage() {
       <footer className="site-footer">
         <hr className="divider" style={{ marginBottom: 24 }} />© 은하수. 모든
         해석은 오락 목적으로 제공됩니다.
+        <div className="footer-links">
+          <a href="/privacy">개인정보처리방침</a>
+          <a href="/terms">이용약관</a>
+        </div>
       </footer>
     </>
   );
