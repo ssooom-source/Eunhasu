@@ -69,7 +69,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2>6. 문의처</h2>
-            <p>개인정보 관련 문의: (운영자 이메일 주소를 입력해주세요)</p>
+            <p>개인정보 관련 문의: hushmoon.radio@gmail.com</p>
           </section>
         </div>
       </main>
