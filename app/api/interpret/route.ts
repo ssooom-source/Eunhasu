@@ -75,18 +75,20 @@ export async function POST(req: NextRequest) {
 - 따뜻하고 시적이면서도 구체적인 문장으로 작성하세요. 뻔한 별자리 운세 같은 문구는 피하세요.
 - 반드시 아래 JSON 스키마만 출력하세요. 다른 설명, 마크다운, 코드블록 없이 순수 JSON만 응답하세요.
 
-스키마:
+스키마 (각 항목은 반드시 지정된 문장 수를 넘지 않도록 간결하게 작성하세요):
 {
   "headline": "이 사람의 사주를 한 문장으로 요약하는 시적인 제목 (15자 내외)",
   "keyword": "이 사람의 기운을 상징하는 두 글자 내외의 키워드 (예: 목화, 수생, 금극)",
-  "elements": "오행(목화토금수) 중 도드라지는 기운에 대한 2~3문장 설명",
-  "personality": "타고난 성격과 기질에 대한 3~4문장",
-  "love": "연애와 관계의 흐름에 대한 3~4문장",
-  "wealth": "재물운과 일에 대한 태도에 대한 3~4문장",
-  "career": "적성과 일/커리어 방향에 대한 3~4문장",
-  "advice": "지금 이 사람에게 도움이 될 실천적 조언 2~3문장",
-  "closing": "따뜻하게 마무리하는 1~2문장"
-}`;
+  "elements": "오행(목화토금수) 중 도드라지는 기운에 대한 2문장 설명",
+  "personality": "타고난 성격과 기질에 대한 3문장",
+  "love": "연애와 관계의 흐름에 대한 3문장",
+  "wealth": "재물운과 일에 대한 태도에 대한 3문장",
+  "career": "적성과 일/커리어 방향에 대한 3문장",
+  "advice": "지금 이 사람에게 도움이 될 실천적 조언 2문장",
+  "closing": "따뜻하게 마무리하는 1문장"
+}
+
+중요: 전체 응답은 반드시 완결된 JSON 객체로 끝나야 합니다. 문장 수를 넘기지 말고, 마지막 "}"로 정확히 마무리하세요.`;
 
   const userPrompt = `생년월일: ${birthDate} (${calendarLabel})
 태어난 시간: ${timeLabel}
@@ -94,44 +96,45 @@ export async function POST(req: NextRequest) {
 
 위 정보를 바탕으로 사주를 해석해주세요.`;
 
-  try {
+  async function callClaude() {
     const message = await client.messages.create({
       model: "claude-sonnet-5",
-      max_tokens: 1500,
+      max_tokens: 2048,
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],
     });
 
     const textBlock = message.content.find((block) => block.type === "text");
     if (!textBlock || textBlock.type !== "text") {
-      return NextResponse.json(
-        { error: "해석 결과를 생성하지 못했습니다." },
-        { status: 502 }
-      );
+      throw new Error("텍스트 블록 없음");
     }
 
-let cleaned = textBlock.text.replace(/```json|```/g, "").trim();
+    let cleaned = textBlock.text.replace(/```json|```/g, "").trim();
     const firstBrace = cleaned.indexOf("{");
     const lastBrace = cleaned.lastIndexOf("}");
-    if (firstBrace !== -1 && lastBrace !== -1) {
-      cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+    if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+      throw new Error("JSON 형식을 찾을 수 없음");
     }
+    cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+
+    return JSON.parse(cleaned) as InterpretationResult;
+  }
+
+  try {
     let parsed: InterpretationResult;
     try {
-      parsed = JSON.parse(cleaned);
+      parsed = await callClaude();
     } catch {
-      return NextResponse.json(
-        { error: "해석 결과 형식을 읽는 데 실패했습니다. 다시 시도해주세요." },
-        { status: 502 }
-      );
+      // 첫 시도에서 형식이 깨졌다면 한 번 더 시도
+      parsed = await callClaude();
     }
 
     return NextResponse.json({ result: parsed });
   } catch (err) {
     console.error("Anthropic API error:", err);
     return NextResponse.json(
-      { error: "해석 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요." },
-      { status: 500 }
+      { error: "해석 결과 형식을 읽는 데 실패했습니다. 다시 시도해주세요." },
+      { status: 502 }
     );
   }
 }
