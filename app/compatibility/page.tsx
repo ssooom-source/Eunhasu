@@ -4,6 +4,10 @@ import CompatibilityForm from "@/components/CompatibilityForm";
 
 export const metadata = {
   title: "궁합 보기 | 은하수",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default function CompatibilityPage() {
