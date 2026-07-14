@@ -245,6 +245,21 @@ export default function HomePage() {
             <div className="how-grid">
               <div className="how-item">
                 <span className="mark">一</span>
+                <h3>생년월일 입력</h3>
+                <p>태어난 날짜와 시간을 알려주세요.</p>
+              </div>
+              <div className="how-item">
+                <span className="mark">二</span>
+                <h3>AI가 기운을 읽어요</h3>
+                <p>오행과 흐름을 바탕으로 이야기를 엮어냅니다.</p>
+              </div>
+              <div className="how-item">
+                <span className="mark">三</span>
+                <h3>나만의 별자리</h3>
+                <p>당신의 정보로 그려진 고유한 별자리를 받아보세요.</p>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section className="info-section">
@@ -296,22 +311,6 @@ export default function HomePage() {
                 삼기에는 충분히 즐거운 경험이 될 거예요. 재미와 자기 이해를
                 위한 콘텐츠로 편하게 즐겨주세요.
               </p>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      <footer className="site-footer">
-">
-                <span className="mark">二</span>
-                <h3>AI가 기운을 읽어요</h3>
-                <p>오행과 흐름을 바탕으로 이야기를 엮어냅니다.</p>
-              </div>
-              <div className="how-item">
-                <span className="mark">三</span>
-                <h3>나만의 별자리</h3>
-                <p>당신의 정보로 그려진 고유한 별자리를 받아보세요.</p>
-              </div>
             </div>
           </div>
         </section>
