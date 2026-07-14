@@ -2,6 +2,14 @@ import { Suspense } from "react";
 import Starfield from "@/components/Starfield";
 import CompatibilityResultContent from "@/components/CompatibilityResultContent";
 
+export const metadata = {
+  title: "궁합 결과 | 은하수",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
 export default function CompatibilityResultPage() {
   return (
     <>
